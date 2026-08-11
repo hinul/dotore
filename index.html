@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>위임장: 누가 나무의 뜻을 말하는가 (委任狀)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Google Fonts for Korean Joseon/Traditional & Pixel aesthetic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Press+Start+2P&family=Noto+Serif+KR:wght@400;600;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Main RPG Canvas -->
+    <canvas id="game-canvas" width="800" height="600"></canvas>
+
+    <!-- Top HUD Overlay -->
+    <div id="hud-bar">
+      <div class="hud-group">
+        <div class="hud-badge"><span class="icon">📜</span> <span id="hud-location">청림원 - 중앙 참나무 중정</span></div>
+        <div class="hud-badge"><span class="icon">🔍</span> 조사 포인트: <strong id="hud-clue-pts">0</strong> PT</div>
+      </div>
+      <div class="hud-group">
+        <button id="btn-tree" class="hud-btn" onclick="window.toggleModalByName('tree');"><span class="icon">👥</span> 청림원 조직도 [T]</button>
+        <button id="btn-ledger" class="hud-btn" onclick="window.toggleModalByName('ledger');"><span class="icon">📖</span> 사건 장부 [J]</button>
+        <button id="btn-work" class="hud-btn" onclick="window.toggleModalByName('work');"><span class="icon">✍️</span> 서리 업무 [W]</button>
+        <button id="btn-map" class="hud-btn" onclick="window.toggleModalByName('map');"><span class="icon">🗺️</span> 청림원 지도 [M]</button>
+        <button id="btn-stats" class="hud-btn" onclick="window.toggleModalByName('stats');"><span class="icon">📊</span> 서리 기록 [S]</button>
+      </div>
+    </div>
+
+    <!-- On-screen Notification / Prompt toast -->
+    <div id="toast-notify" class="toast hidden"></div>
+
+    <!-- Quick Interaction Prompt (Press Space / Click) -->
+    <div id="interact-prompt" class="prompt-box hidden">
+      <span class="key-cap">Space</span> <span id="interact-label">조사하기 / 대화하기</span>
+    </div>
+
+    <!-- Virtual Touch D-Pad & Action Buttons -->
+    <div id="touch-controls">
+      <div id="dpad">
+        <button class="dpad-btn up" data-dir="up">▲</button>
+        <button class="dpad-btn left" data-dir="left">◀</button>
+        <button class="dpad-btn right" data-dir="right">▶</button>
+        <button class="dpad-btn down" data-dir="down">▼</button>
+      </div>
+      <div class="action-btn-group">
+        <button id="touch-action" class="action-btn">조사 / 대화</button>
+        <button id="btn-screen-submit-ledger" class="action-btn submit-action-btn">📜 장부 제출 (엔딩)</button>
+      </div>
+    </div>
+
+    <!-- Dialogue Box Modal -->
+    <div id="dialogue-modal" class="modal-overlay hidden">
+      <div class="dialogue-box">
+        <div class="speaker-header">
+          <div class="speaker-portrait" id="speaker-avatar"></div>
+          <div class="speaker-info">
+            <h3 id="speaker-name">인물 이름</h3>
+            <span id="speaker-title" class="speaker-tag">직책</span>
+          </div>
+          <button class="close-btn" id="btn-close-dialogue" style="margin-left: auto;">✕</button>
+        </div>
+        <div class="dialogue-body">
+          <p id="dialogue-text">대화 내용이 이곳에 표시됩니다.</p>
+        </div>
+        <!-- Dialogue Choices -->
+        <div id="dialogue-choices" class="choices-container hidden"></div>
+        <div class="dialogue-footer">
+          <span class="hint-text">[Space] 또는 클릭하여 다음 진행</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Pickup Reader Modal -->
+    <div id="document-modal" class="modal-overlay hidden">
+      <div class="paper-modal-box">
+        <div class="paper-header">
+          <span class="stamp-seal">청림원 기록</span>
+          <h2 id="doc-title">서류 제목</h2>
+          <button class="close-btn" id="btn-close-doc">✕</button>
+        </div>
+        <div class="paper-body">
+          <div id="doc-content" class="hanmun-styled">서류 본문 내용</div>
+        </div>
+        <div class="paper-footer">
+          <div class="reward-tag">+<span id="doc-reward-pts">10</span> 조사 포인트 획득!</div>
+          <button id="btn-add-to-ledger" class="primary-btn">사건 장부에 증거 기록하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Organization Tree Modal (청림원 인물 조직도) -->
+    <div id="tree-modal" class="modal-overlay hidden">
+      <div class="tree-box">
+        <div class="modal-header">
+          <h2>👥 청림원 (靑林院) 권력 & 해석 구도 조직도</h2>
+          <span class="subtitle">직책별 세력 구도와 대상 발언의 두 가지 해석자 비교</span>
+          <button class="close-btn" id="btn-close-tree">✕</button>
+        </div>
+        <div class="tree-body">
+          <!-- Top Level: Grand Master -->
+          <div class="tree-node top-node">
+            <div class="node-card gm-card">
+              <span class="node-role">최고 책임자</span>
+              <h4>대상 (大上)</h4>
+              <p>모호하고 규칙적이지 않은 발언. 자신의 뜻을 명확한 지시로 정리해 전달하지 않음.</p>
+            </div>
+          </div>
+
+          <!-- Tree Branch Connector -->
+          <div class="tree-branch-line"></div>
+
+          <!-- Middle Level: Two Interpreter Factions -->
+          <div class="tree-branches">
+            <!-- Left Branch: Heir Faction -->
+            <div class="branch-col heir-branch">
+              <div class="branch-header">후계자 세력</div>
+              <div class="node-card">
+                <span class="node-role">대상의 아들</span>
+                <h4>후계자</h4>
+                <p>수동적이고 결정을 미룸. 대상에게 간혹 반박하나 대담하게 밀어붙이지 못함.</p>
+              </div>
+              <div class="node-card interp-card">
+                <span class="node-role">핵심 해석자 A</span>
+                <h4>후계자의 오른팔</h4>
+                <p>대상의 짧고 모호한 발언을 과하게 억측·해석하고, 자신의 생각과 욕망을 듬뿍 덧붙여 장황하게 전달하는 수다스러운 인물.</p>
+              </div>
+            </div>
+
+            <!-- Middle VS Divider -->
+            <div class="branch-vs">
+              <span>해석 대립</span>
+              <div class="vs-line"></div>
+            </div>
+
+            <!-- Right Branch: Outpost Faction -->
+            <div class="branch-col outpost-branch">
+              <div class="branch-header">외방관 세력</div>
+              <div class="node-card">
+                <span class="node-role">원칙주의 책임자</span>
+                <h4>외방관</h4>
+                <p>자신이 직접 겪었던 과거의 경험만을 유일한 진실이자 기준으로 생각하는 고집스러운 성품.</p>
+              </div>
+              <div class="node-card interp-card">
+                <span class="node-role">핵심 해석자 B</span>
+                <h4>외방관의 오른팔</h4>
+                <p>외방관이나 대상의 방식이 내심 마음에 들지 않으나, 굳이 나서지 않고 묵묵히 따라가는 관조적 인물.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Level: Record Keepers -->
+          <div class="tree-bottom">
+            <div class="node-card clerk-card">
+              <span class="node-role">조력자</span>
+              <h4>선배 관원</h4>
+              <p>장부 관리 선배. 세력 다툼에 휘둘리지 말고 주관대로 기록할 것을 조언함.</p>
+            </div>
+            <div class="node-card player-card">
+              <span class="node-role">주인공 (독립적 기록자)</span>
+              <h4>신입 서리 (플레이어)</h4>
+              <p>권력이 없음. 서류를 수집하고 업무를 다하여 스스로 진실을 판단하는 인물.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incident Ledger Modal (사건 장부) -->
+    <div id="ledger-modal" class="modal-overlay hidden">
+      <div class="ledger-box">
+        <div class="modal-header">
+          <h2>📖 사건 장부 (事件 帳簿)</h2>
+          <span class="subtitle">모호한 명령과 해석의 모순을 추리하라</span>
+          <button class="close-btn" id="btn-close-ledger">✕</button>
+        </div>
+        <div class="ledger-tabs">
+          <button class="tab-btn active" data-tab="tab-facts">사실 (事實)</button>
+          <button class="tab-btn" data-tab="tab-testimonies">증언 (證言)</button>
+          <button class="tab-btn" data-tab="tab-interpretations">해석 비교 (解釋)</button>
+          <button class="tab-btn" data-tab="tab-contradictions">모순 (矛盾)</button>
+          <button class="tab-btn" data-tab="tab-hypotheses">나의 가설 (假設)</button>
+        </div>
+        <div class="ledger-body">
+          <!-- Tab Contents -->
+          <div id="tab-facts" class="tab-content active">
+            <div id="facts-list" class="clue-grid"></div>
+          </div>
+          <div id="tab-testimonies" class="tab-content">
+            <div id="testimonies-list" class="clue-grid"></div>
+          </div>
+          <div id="tab-interpretations" class="tab-content">
+            <div class="interpretation-comparison">
+              <div class="interp-column heir-side">
+                <h3>후계자의 오른팔</h3>
+                <div id="heir-interp-list"></div>
+              </div>
+              <div class="interp-vs">VS</div>
+              <div class="interp-column outpost-side">
+                <h3>외방관의 오른팔</h3>
+                <div id="outpost-interp-list"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-contradictions" class="tab-content">
+            <div id="contradictions-list" class="clue-grid"></div>
+          </div>
+          <div id="tab-hypotheses" class="tab-content">
+            <div class="hypothesis-builder">
+              <h3>위임장의 진위와 대전제 가설 세우기</h3>
+              <p class="section-desc">수집한 사실과 모순을 조합하여 대상의 진정한 의중을 추리하십시오.</p>
+              <div id="hypotheses-list"></div>
+            </div>
+          </div>
+        </div><!-- /.ledger-body -->
+        <div class="ledger-footer">
+          <span class="hint-text">💡 수집된 사실과 모순이 축적되면 대상께 직접 장부를 제출할 수 있습니다.</span>
+          <button id="btn-submit-ledger" class="primary-btn submit-ledger-btn">📜 대상께 사건 장부 최종 제출하기</button>
+        </div>
+      </div><!-- /.ledger-box -->
+    </div><!-- /#ledger-modal -->
+
+    <!-- Administrative Work Minigame Modal (서리 업무) -->
+    <div id="work-modal" class="modal-overlay hidden">
+      <div class="work-box">
+        <div class="modal-header">
+          <h2>✍️ 청림원 신입 서리 일상 업무</h2>
+          <span class="subtitle">성실한 업무 처리는 더 넓은 정보 접근 권한과 신뢰를 가져옵니다.</span>
+          <button class="close-btn" id="btn-close-work">✕</button>
+        </div>
+        <div class="work-body">
+          <div class="work-selection">
+            <div class="work-card" data-work="ledger-audit">
+              <span class="work-icon">📂</span>
+              <h4>오래된 세입 장부 대조</h4>
+              <p>외방 거점과 중앙 청림원 간의 곡물 장부 수치를 확인하여 결번 및 이상 날짜를 찾아냅니다.</p>
+              <button class="work-start-btn" onclick="workSystem.startTask('ledger-audit');">업무 시작</button>
+            </div>
+            <div class="work-card" data-work="region-survey">
+              <span class="work-icon">🗺️</span>
+              <h4>남쪽 거점 지역 보고서 정리</h4>
+              <p>남쪽 거점에서 올라온 서신을 분류하고 대상의 구두 지시와 맞는지 비교합니다.</p>
+              <button class="work-start-btn" onclick="workSystem.startTask('region-survey');">업무 시작</button>
+            </div>
+            <div class="work-card" data-work="event-prep">
+              <span class="work-icon">🏮</span>
+              <h4>청림원 추수 의례 준비</h4>
+              <p>후계자 측과 외방관 측의 의례 좌석 배치 조율 요청을 기록하고 조율안을 작성합니다.</p>
+              <button class="work-start-btn" onclick="workSystem.startTask('event-prep');">업무 시작</button>
+            </div>
+          </div>
+          <!-- Minigame Workspace Canvas/Interactive area -->
+          <div id="work-minigame-area" class="hidden">
+            <h3 id="minigame-title">업무 수행 중...</h3>
+            <div id="minigame-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- World Map Modal (지도) -->
+    <div id="map-modal" class="modal-overlay hidden">
+      <div class="map-box">
+        <div class="modal-header">
+          <h2>🗺️ 청림원 (靑林院) 거점 배치도</h2>
+          <button class="close-btn" id="btn-close-map">✕</button>
+        </div>
+        <div class="map-body">
+          <div class="map-grid">
+            <div class="map-zone" data-target="sanctum" onclick="if(window.gameInstance){ window.gameInstance.changeMap('sanctum', 5, 6); document.getElementById('map-modal').classList.add('hidden'); }">
+              <div class="zone-tag">북쪽</div>
+              <h4>대상의 정전 (頂殿)</h4>
+              <p>청림원 최고 책임자가 머무르는 고요하고 엄숙한 전각.</p>
+            </div>
+            <div class="map-zone" data-target="heir" onclick="if(window.gameInstance){ window.gameInstance.changeMap('heir', 4, 4); document.getElementById('map-modal').classList.add('hidden'); }">
+              <div class="zone-tag">서쪽</div>
+              <h4>후계자의 처소 (後繼處)</h4>
+              <p>대상의 아들과 오른팔이 조직 현안을 처리하는 곳.</p>
+            </div>
+            <div class="map-zone active" data-target="courtyard" onclick="if(window.gameInstance){ window.gameInstance.changeMap('courtyard', 5, 7); document.getElementById('map-modal').classList.add('hidden'); }">
+              <div class="zone-tag">중앙</div>
+              <h4>참나무 중정 (巨木庭)</h4>
+              <p>거대한 참나무가 우뚝 솟아 있는 청림원의 상징적 중심지.</p>
+            </div>
+            <div class="map-zone" data-target="outpost" onclick="if(window.gameInstance){ window.gameInstance.changeMap('outpost', 4, 4); document.getElementById('map-modal').classList.add('hidden'); }">
+              <div class="zone-tag">동쪽</div>
+              <h4>외방관 집무실 (外方廳)</h4>
+              <p>오랫동안 현장을 지켜온 원칙주의 외방관의 집무실.</p>
+            </div>
+            <div class="map-zone" data-target="archive" onclick="if(window.gameInstance){ window.gameInstance.changeMap('archive', 5, 4); document.getElementById('map-modal').classList.add('hidden'); }">
+              <div class="zone-tag">남쪽</div>
+              <h4>중앙 서고 (中央書庫)</h4>
+              <p>수십 년간 쌓인 장부와 기옥 기록물이 보관된 서고.</p>
+            </div>
+          </div>
+        </div>
+        <div class="map-footer">
+          <span>클릭하여 해당 구역으로 바로 이동할 수 있습니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Stats & Growth Ledger Modal (서리 기록) -->
+    <div id="stats-modal" class="modal-overlay hidden">
+      <div class="stats-box">
+        <div class="modal-header">
+          <h2>📊 신입 서리 성찰 & 능력 기록</h2>
+          <button class="close-btn" id="btn-close-stats">✕</button>
+        </div>
+        <div class="stats-body">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">업무 능력</span>
+              <div class="stat-bar-bg"><div class="stat-bar-fill" id="stat-work" style="width: 20%;"></div></div>
+              <span class="stat-val" id="val-work">Lv.1 (20/100)</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">관찰력</span>
+              <div class="stat-bar-bg"><div class="stat-bar-fill" id="stat-observe" style="width: 30%;"></div></div>
+              <span class="stat-val" id="val-observe">Lv.1 (30/100)</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">추리력</span>
+              <div class="stat-bar-bg"><div class="stat-bar-fill" id="stat-reason" style="width: 15%;"></div></div>
+              <span class="stat-val" id="val-reason">Lv.1 (15/100)</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">독립성 (주관)</span>
+              <div class="stat-bar-bg"><div class="stat-bar-fill" id="stat-indep" style="width: 40%;"></div></div>
+              <span class="stat-val" id="val-indep">Lv.1 (40/100)</span>
+            </div>
+          </div>
+
+          <div class="records-history">
+            <h3>📜 축적된 나의 업무 및 판단 기록 (`[기록]` 시스템)</h3>
+            <div id="records-list" class="records-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Climax / Ending Overlay Screen -->
+    <div id="ending-screen" class="modal-overlay hidden">
+      <div class="ending-box">
+        <h1 id="ending-title">TRUE HAPPY ENDING</h1>
+        <h2 id="ending-subtitle">「나의 숲으로」</h2>
+        <div id="ending-quote" class="quote-box">
+          <p>“나무를 떠난다고 해서 그 아래에서 자란 시간이 사라지는 것은 아니다.”</p>
+          <p class="highlight">“이제 어디에 뿌리내릴지는 내가 정한다.”</p>
+        </div>
+        <div id="ending-summary" class="ending-body"></div>
+        <button id="btn-restart" class="primary-btn">다시 시작하기</button>
+      </div>
+    </div>
+
+    <!-- Grand Master Sudden Emergence Overlay FX -->
+    <div id="fx-grandmaster" class="gm-effect hidden">
+      <div class="gm-text-ring">
+        <div class="gm-title">대 상 출 몰 (大上 出沒)</div>
+        <p class="gm-sub">조직의 근간이 흔들리고 새로운 의중이 감지됩니다...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game JavaScript Engine Files -->
+  <script src="js/data/documents.js"></script>
+  <script src="js/data/npcs.js"></script>
+  <script src="js/data/maps.js"></script>
+  <script src="js/data/story.js"></script>
+  <script src="js/engine/audio.js"></script>
+
+  <script src="js/systems/player.js"></script>
+  <script src="js/systems/ledger.js"></script>
+  <script src="js/systems/work.js"></script>
+  <script src="js/engine/canvas.js"></script>
+  <script src="js/engine/input.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
